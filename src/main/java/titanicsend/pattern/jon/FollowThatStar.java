@@ -15,44 +15,9 @@ import titanicsend.pattern.yoffa.shader_engine.ShaderOptions;
 
 @LXCategory("Combo FG")
 public class FollowThatStar extends TEAudioPattern {
-
-    // variable speed fake "iTime" timer class
-    // allows smooth speed changes
-    class VariableTimer {
-        long previous = 0;
-        long current = 0;
-        float time = 0.0f;
-        float scale = 1.0f;
-
-        VariableTimer() {
-            scale = 1.0f;
-            reset();
-        }
-
-        void reset() {
-            previous = current = System.currentTimeMillis();
-            time = 0.0f;
-        }
-
-        void setScale(float s) {
-            scale = s;
-        }
-
-        void tick() {
-            float delta = (float) (previous - current);
-            time += scale * delta / 1000.0;
-            previous = current;
-            current = System.currentTimeMillis();
-        }
-
-        float getTime() {
-            return time;
-        }
-    }
-
     NativeShaderPatternEffect effect;
     NativeShader shader;
-    VariableTimer vTime;
+    VariableSpeedTimer vTime;
     float lastTimeScale = 0;
 
     // Controls
@@ -108,7 +73,7 @@ public class FollowThatStar extends TEAudioPattern {
         effect = new NativeShaderPatternEffect("followthatstar.fs",
                 PatternTarget.allPointsAsCanvas(this), options);
 
-        vTime = new VariableTimer();
+        vTime = new VariableSpeedTimer();
     }
 
     @Override
