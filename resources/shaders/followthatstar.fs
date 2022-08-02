@@ -1,3 +1,5 @@
+precision mediump float;
+
 uniform vec3 color;
 uniform float stars;
 uniform float starSize;

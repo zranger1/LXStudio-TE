@@ -1,3 +1,8 @@
+uniform vec3 color;
+uniform float energy;
+uniform float vTime;
+
+vec3 col;
 
 vec3 hsv2rgb(vec3 c)
 {
@@ -12,29 +17,30 @@ mat2 rot(float a) {
 }
 
 vec3 fractal(vec2 p) {    
-    p.x += 0.3333 * sin(iTime*.4);
+    p.x += 0.3333 * sin(vTime*.4);
        
     float ot1 = 1000., ot2=ot1, it=0.;
     
     for (float i = 0.; i < 4.; i++) {
         p=abs(p);
         p=p/clamp(p.x*p.y,0.15,5.)-vec2(1.5,1.);
-        float m = abs(p.x+sin(iTime));
+        float m = abs(p.x+sinPhaseBeat);
         if (m<ot1) {
-            ot1=m+step(fract(iTime*1.+float(i)*.05),.15*abs(p.y));
+            ot1=m+step(fract(vTime*1.+float(i)*.05),.15*abs(p.y));
             it=i;
         }
         ot2=min(ot2,length(p));
     }
     
     ot1=exp(-30.*ot1);
-    ot2=exp(-130.*ot2);
-    return hsv2rgb(vec3(it*0.13+.5,.7,1.))*sqrt(ot1+ot2);
+    ot2=exp(-30.*ot2);
+
+    return hsv2rgb(color)*ot1+ot2;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-    vec2 uv = fragCoord.xy/iResolution.xy-.5;
-    uv.x*=iResolution.x/iResolution.y;
+    vec2 uv = -0.5+fragCoord.xy/iResolution.xy;
+    //uv.x*=iResolution.x/iResolution.y;
     
     float aa=2.;
     
@@ -47,5 +53,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
             c += fractal(p);
         }
     }
-    fragColor = vec4(c/(aa*aa*0.35),1.);
+    float bri = 1./aa * aa * 0.35;
+
+    fragColor = vec4(c*bri,bri);
 }

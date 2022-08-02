@@ -68,20 +68,19 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         t_y = (uv.x+uv.x)*uv.y + b;
         uv.x = t_x;
         uv.y = t_y;
-        /*
-        if(uv.x*uv.x+uv.y*uv.y>4.){
-            final_score = float(i)+1.;
+        if(uv.x*uv.x+uv.y*uv.y>4.) {
+            //final_score = float(i)+1.;
+            break;
         }
-        */
-        final_score = d;
+
     }
+    final_score = d;
 
     float c;
     // if(d <r) c = 1.; else c = 1.-1./(1+exp());
     // c = float(final_score)/float(max_iter+1);
-    c = 1./(1.+sqrt(final_score));
-    vec3 col = vec3(c);
+    c = 1./(1.+sqrt(final_score)) - {%Glow[0.25,0.5,0]};
 
     // Output to screen
-    fragColor = vec4(col,1.0);
+    fragColor = vec4(iColorRGB * c,c);
 }

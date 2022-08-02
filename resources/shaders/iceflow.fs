@@ -1,4 +1,5 @@
 // Adapted from https://www.shadertoy.com/view/MdtGWH
+precision mediump float;
 
 uniform vec3 color;
 uniform float vTime;

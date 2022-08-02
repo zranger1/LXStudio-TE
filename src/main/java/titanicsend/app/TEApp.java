@@ -117,6 +117,7 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(BouncingDots.class);
     lx.registry.addPattern(Bubbles.class);
     lx.registry.addPattern(Checkers.class);
+    lx.registry.addPattern(Circuitry.class);
     lx.registry.addPattern(EdgeKITT.class);
     lx.registry.addPattern(EdgeRunner.class);
     lx.registry.addPattern(FollowThatStar.class);
@@ -126,8 +127,10 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(PixelblazeSandbox.class);
     lx.registry.addPattern(PBAudio1.class);
     lx.registry.addPattern(PBXorcery.class);
+    lx.registry.addPattern(PBXorcery2.class);
     lx.registry.addPattern(PBFireworkNova.class);
     lx.registry.addPattern(PixelblazeParallel.class);
+    lx.registry.addPattern(PixelStats.class);
     lx.registry.addPattern(SolidEdge.class);
     lx.registry.addPattern(SolidPanel.class);
     lx.registry.addPattern(PulsingTriangles.class);
