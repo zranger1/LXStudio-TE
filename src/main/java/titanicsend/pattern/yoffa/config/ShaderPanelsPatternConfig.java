@@ -247,6 +247,19 @@ public class ShaderPanelsPatternConfig {
     }
 
     @LXCategory("Native Shaders Panels")
+    public static class Glowlines1 extends ConstructedPattern {
+        public Glowlines1(LX lx) {
+            super(lx);
+        }
+        @Override
+        protected List<PatternEffect> createEffects() {
+            return List.of(new NativeShaderPatternEffect("glowlines.fs",
+                    PatternTarget.allPanelsAsCanvas(this)));
+        }
+    }
+
+
+    @LXCategory("Native Shaders Panels")
     public static class NeonCells extends ConstructedPattern {
         public NeonCells(LX lx) {
             super(lx);

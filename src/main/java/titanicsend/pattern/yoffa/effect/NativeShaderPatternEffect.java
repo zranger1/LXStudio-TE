@@ -136,7 +136,7 @@ public class NativeShaderPatternEffect extends PatternEffect {
             b = (float) (0xff & LXColor.blue(color)) / 255f;
             palette.put(b);
         }
-        palette.rewind();
+        //palette.rewind();
     }
 
 
