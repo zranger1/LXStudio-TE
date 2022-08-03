@@ -9,6 +9,7 @@ import heronarts.lx.parameter.LXParameter;
 import titanicsend.model.TEEdgeModel;
 import titanicsend.model.TEPanelModel;
 import titanicsend.pattern.TEAudioPattern;
+import titanicsend.pattern.yoffa.shader_engine.ShaderPainter;
 import titanicsend.util.TEMath;
 
 import java.util.ArrayList;
@@ -19,8 +20,10 @@ public class VertexSunTest extends TEAudioPattern {
 
     // pattern variables
     double time = 0;
+    ShaderPainter painter;
     float MINRADIUS = 0.05f;
 
+    int[][] frameBuffer;
 
     static class VertexCoord {
         float x,y,z;
