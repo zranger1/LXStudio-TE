@@ -5,6 +5,7 @@ import titanicsend.pattern.TEMidiFighter64DriverPattern;
 import titanicsend.pattern.TEPattern;
 
 public abstract class TEMidiFighter64Subpattern {
+  TEPattern pattern;
   public final TEMidiFighter64DriverPattern driver;
   protected TEMidiFighter64Subpattern(TEMidiFighter64DriverPattern driver) {
     this.driver = driver;
