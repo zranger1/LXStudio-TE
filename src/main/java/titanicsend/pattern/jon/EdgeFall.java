@@ -101,7 +101,6 @@ public class EdgeFall extends TEAudioPattern {
         }
     }
 
-
     public EdgeFall(LX lx) {
         super(lx);
         addParameter("glow",glow);

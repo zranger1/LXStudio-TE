@@ -1,6 +1,6 @@
 uniform float energy;
 uniform float glow;
-uniform vec4[] lines;
+uniform vec4[4] lines;
 
 const float PI = 3.14159265359;
 
