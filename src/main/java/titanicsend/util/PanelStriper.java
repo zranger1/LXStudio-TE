@@ -8,6 +8,9 @@ import titanicsend.model.TEVertex;
 
 import java.util.*;
 
+import static java.lang.Math.atan2;
+import static java.lang.Math.tan;
+
 public class PanelStriper {
   public static final int MARGIN = 86000;
   public static final int DISTANCE_BETWEEN_PIXELS = 50000; // 50k microns ~= 2 inches
@@ -121,7 +124,7 @@ public class PanelStriper {
     if (stripingInstructions == null)
       floorPoints = oldStripeFloor(floorTransform.f0, floorTransform.f1, floorTransform.f2);
     else
-      floorPoints = newStripeFloor(
+      floorPoints = newStripeFloor(id,
               floorTransform.f0, floorTransform.f1, floorTransform.f2,
               stripingInstructions, gapFloorPoint);
     for (FloorPoint f : floorPoints) {
@@ -153,19 +156,11 @@ public class PanelStriper {
     return new ArrayList<>();
   }
 
-  private static List<FloorPoint> newStripeFloor(
+  private static List<FloorPoint> newStripeFloor(String id,
           FloorPoint fStart, FloorPoint fMid, FloorPoint fEnd,
           TEStripingInstructions stripingInstructions, FloorPoint gapFloorPoint) {
     FloorPoint currentPoint = findStartingPoint(fEnd);
     ArrayList<FloorPoint> rv = new ArrayList<>();
-
-    int attempts = 0;
-    final double EPSILON = DISTANCE_BETWEEN_PIXELS / 10.0;
-    while(distanceToEdge(fStart, fMid, fEnd, currentPoint) < MARGIN) {
-      currentPoint = new FloorPoint(currentPoint.x + EPSILON, currentPoint.z);
-      // FIXME
-      if (++attempts == 100) LX.log(attempts + " attempts to find starting point");
-    }
 
     double deltaX = DISTANCE_BETWEEN_PIXELS;
 
@@ -205,7 +200,7 @@ public class PanelStriper {
   private static double calcHeading(FloorPoint start, FloorPoint destination) {
     double dx = destination.x - start.x;
     double dz = destination.z - start.z;
-    return Math.atan2(dz, dx);
+    return atan2(dz, dx);
   }
 
   // https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
@@ -246,8 +241,9 @@ public class PanelStriper {
     assert (fEnd.x > 0);
     assert (fEnd.z > 0);
 
-    double slope = fEnd.z / fEnd.x;
-    double x = z / slope;
+    double theta = atan2(fEnd.z, fEnd.x) / 2.0;
+    double tanTheta = tan(theta);
+    double x = MARGIN / tanTheta;
     return new FloorPoint(x, z);
   }
 }
