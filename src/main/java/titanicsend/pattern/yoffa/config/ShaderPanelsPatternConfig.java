@@ -222,6 +222,18 @@ public class ShaderPanelsPatternConfig {
         }
     }
 
+    @LXCategory("Native Shaders Panels")
+    public static class StainedGlass extends ConstructedPattern {
+        public StainedGlass(LX lx) {
+            super(lx);
+        }
+        @Override
+        protected List<PatternEffect> createEffects() {
+            return List.of(new NativeShaderPatternEffect("stainedglass.fs",
+                    PatternTarget.allPanelsAsCanvas(this)));
+        }
+    }
+
     @LXCategory("Test")
     public static class AudioTest2 extends ConstructedPattern {
         public AudioTest2(LX lx) {
