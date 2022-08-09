@@ -229,7 +229,7 @@ public class ShaderPanelsPatternConfig {
         }
         @Override
         protected List<PatternEffect> createEffects() {
-            return List.of(new NativeShaderPatternEffect("stainedglass.fs",
+            return List.of(new NativeShaderPatternEffect("glassbricks.fs",
                     PatternTarget.allPanelsAsCanvas(this)));
         }
     }
