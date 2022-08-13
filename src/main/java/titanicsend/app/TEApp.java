@@ -45,6 +45,7 @@ import titanicsend.pattern.mike.*;
 import titanicsend.pattern.pixelblaze.*;
 import titanicsend.pattern.tmc.*;
 import titanicsend.pattern.tom.*;
+import titanicsend.pattern.will.PowerDebugger;
 import titanicsend.pattern.yoffa.config.OrganicPatternConfig;
 import titanicsend.pattern.yoffa.config.ShaderEdgesPatternConfig;
 import titanicsend.pattern.yoffa.media.BasicImagePattern;
@@ -118,6 +119,7 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(Bubbles.class);
     lx.registry.addPattern(Checkers.class);
     lx.registry.addPattern(Circuitry.class);
+    lx.registry.addPattern(EdgeFall.class);
     lx.registry.addPattern(EdgeKITT.class);
     lx.registry.addPattern(EdgeRunner.class);
     lx.registry.addPattern(FollowThatStar.class);
@@ -157,7 +159,9 @@ public class TEApp extends PApplet implements LXPlugin  {
 
     // Test/debug patterns
     lx.registry.addPattern(ModelDebugger.class);
+    lx.registry.addPattern(PowerDebugger.class);
     // lx.registry.addPattern(ModuleEditor.class);
+    lx.registry.addPattern(SignalDebugger.class);
 
     // create our library for autopilot
     this.library = initializePatternLibrary(lx);
@@ -171,9 +175,11 @@ public class TEApp extends PApplet implements LXPlugin  {
       TE.log("Failed to create GigglePixel listener: " + e.getMessage());
     }
 
+    // This should of course be in the config, but we leave for the playa in like a week
+    String destIP = "192.168.42.255";
     try {
       this.gpBroadcaster = new GigglePixelBroadcaster(
-              lx, "255.255.255.255", this.model.name, myGigglePixelID);
+              lx, destIP, this.model.name, myGigglePixelID);
       lx.engine.addLoopTask(this.gpBroadcaster);
       TE.log("GigglePixel broadcaster created");
     } catch (IOException e) {
