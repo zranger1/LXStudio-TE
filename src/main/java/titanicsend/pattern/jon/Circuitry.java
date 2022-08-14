@@ -32,8 +32,8 @@ public class Circuitry extends TEAudioPattern {
                     .setUnits(LXParameter.Units.INTEGER)
                     .setDescription("Speed relative to beat");
 
-    public final LinkedColorParameter color =
-            registerColor("Color", "color", ColorType.PANEL,
+    public final LinkedColorParameter iColor =
+            registerColor("Color", "iColor", ColorType.PRIMARY,
                     "Panel Color");
 
     public Circuitry(LX lx) {
@@ -49,7 +49,7 @@ public class Circuitry extends TEAudioPattern {
         options.useLXParameterUniforms(false);
 
         effect = new NativeShaderPatternEffect("circuitry.fs",
-                PatternTarget.allPanelsAsCanvas(this), options);
+                PatternTarget.allPointsAsCanvas(this), options);
 
         vTime = new VariableSpeedTimer();
     }
@@ -59,16 +59,6 @@ public class Circuitry extends TEAudioPattern {
 
         vTime.tick();
 
-        // Example of sending a vec3 to a shader.
-        // Get the current color and convert to
-        // normalized hsb in range 0..1 for openGL
-        int baseColor = this.color.calcColor();
-        float hn = LXColor.h(baseColor) / 360f;
-        float sn = LXColor.s(baseColor) / 100f;
-        float bn = LXColor.b(baseColor) / 100f;
-
-        shader.setUniform("color", hn,sn,bn);
-
         // set time speed for next frame. This moves w/measure rather than beat
         float timeScale = (float) lx.engine.tempo.bpm()/beatScale.getValuef() / 4.0f;
         if (timeScale != lastTimeScale) {
@@ -77,11 +67,11 @@ public class Circuitry extends TEAudioPattern {
         }
 
         // movement over time, however fast time is running
-        shader.setUniform("vTime",vTime.getTime());
+        //shader.setUniform("vTime",vTime.getTime());
 
         // Sound reactivity - various brightness features are related to energy
         float e = energy.getValuef();
-        shader.setUniform("energy",e*e);
+        //shader.setUniform("energy",e*e);
 
         // run the shader
         effect.run(deltaMs);

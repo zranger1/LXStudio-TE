@@ -73,7 +73,7 @@ public class VertexSunTest extends TEAudioPattern {
         float t1 = (float) (time / 6);
 
         float t = (float) lx.engine.tempo.basis();
-        int color = getSwatchColor(ColorType.PANEL);
+        int color = getSwatchColor(ColorType.PRIMARY);
         for (LXPoint p: model.getPoints()) {
             for (VertexCoord v : vertices) {
                 float dist = chebyshev(v.x-p.xn,v.y-p.yn,v.z-p.zn);
