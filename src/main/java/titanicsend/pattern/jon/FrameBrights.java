@@ -9,15 +9,16 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import titanicsend.model.TEEdgeModel;
 import titanicsend.pattern.TEAudioPattern;
+import titanicsend.util.TE;
+import titanicsend.util.TEMath;
 
 import java.util.Random;
 
 // All LED platforms, no matter how large, must have KITT!
 @LXCategory("Edge FG")
-public class EdgeSpotlights extends TEAudioPattern {
+public class FrameBrights extends TEAudioPattern {
     private static final int MAX_ZONES = 60;
     boolean[] zoneIsLit;
-    float[] zoneCenters;
     long seed;
     Random prng;
     float cycleCount;
@@ -27,9 +28,9 @@ public class EdgeSpotlights extends TEAudioPattern {
                     .setUnits(LXParameter.Units.INTEGER)
                     .setDescription("Number of measures between segment shifts");
     protected final CompoundParameter zonesPerEdge = (CompoundParameter)
-            new CompoundParameter("Zones", 12, 1, MAX_ZONES)
+            new CompoundParameter("Zones", 20, 1, MAX_ZONES)
                     .setUnits(LXParameter.Units.INTEGER)
-                    .setDescription("Total number of light segments edge");
+                    .setDescription("Total lit segments per edge");
 
     public final CompoundParameter minBrightness =
             new CompoundParameter("BG Bri", 0.125, 0.0, 1)
@@ -66,7 +67,7 @@ public class EdgeSpotlights extends TEAudioPattern {
             registerColor("Color", "color", ColorType.PRIMARY,
                     "Color");
 
-    public EdgeSpotlights(LX lx) {
+    public FrameBrights(LX lx) {
         super(lx);
         addParameter("energy", energy);
         addParameter("beatsPerCycle", cycleLength);
@@ -82,29 +83,29 @@ public class EdgeSpotlights extends TEAudioPattern {
         lastCycle = 99f; // trigger immediate start;
         cycleCount = 0f;
         zoneIsLit = new boolean[MAX_ZONES];  // should be plenty of room.
-        zoneCenters = new float[MAX_ZONES];
     }
 
     // choose between minLit and maxLit random segments of an edge to light
     // and prepare the data necessary to do quickly
     void lightRandomSegments(int zoneCount, int minLit, int maxLit) {
-        int nLit = Math.max(minLit,(int) (maxLit * prng.nextFloat()));
-        float zoneWidth = 1f/(float) zoneCount;
+        int nLit = Math.max(minLit,(int) Math.round(maxLit * prng.nextFloat()));
 
+        // set all segments dark
         for (int i = 0; i < (int) zoneCount; i++) {
             zoneIsLit[i] = false;
         }
+
+        // pick a new set of segments to light
         for (int i = 0; i < nLit; i++) {
-            int index = (int) (zoneCount * prng.nextFloat());
+            int index = (int) Math.floor(prng.nextFloat() * (zoneCount - 1));
             zoneIsLit[index] = true;
-            zoneCenters[index] = ((index + 0.5f) * zoneWidth);
         }
     }
 
     public void runTEAudioPattern(double deltaMs) {
         updateGradients();
 
-        // we sync lit segment changes to measures, and
+        // sync lit segment selection changes to measures, and
         // light pulses to the beat.
         float currentCycle = (float) measure();
         float currentBeat = (float) getTempo().basis();
@@ -127,9 +128,11 @@ public class EdgeSpotlights extends TEAudioPattern {
 
         lastCycle = measure();
 
+        // reset prng so we get the same set of numbers each frame 'till
+        // we change the seed.
         prng.setSeed(seed);
 
-        // pick up the current color
+        // get the current color
         int baseColor = this.color.calcColor();
 
         // spotlight brightness pulses with the beat
@@ -138,8 +141,8 @@ public class EdgeSpotlights extends TEAudioPattern {
         // get display parameter variables from control settings
         float yMin = minHeight.getValuef();
         float minBri = minBrightness.getValuef();
+        float briShift = (float) (energy.getValue() * Math.min(0.25,minBri * 0.25));
         int zoneCount = (int) zonesPerEdge.getValue();
-        float zoneWidth = 1f/(float) zoneCount;
 
         // get, and de-confuse min and max number of segments to light
         // (max must be greater than min, both must be <= current zone count)
@@ -154,17 +157,17 @@ public class EdgeSpotlights extends TEAudioPattern {
             float alpha;
             lightRandomSegments(zoneCount,minZones,maxZones);
             for (TEEdgeModel.Point point : edge.points) {
-                int zone = (int) Math.floor(point.frac * zoneCount);
+                int zone = (int) Math.floor(point.frac * (zoneCount-1));
 
-                // light segment with some brightness shaping towards segment ends
+                // lit segments to pulsing max brightness
                 if (zoneIsLit[zone] && point.yn >= yMin) {
-                    float zonePos = Math.abs(point.frac - zoneCenters[zone]) / zoneWidth;
-                    zonePos = zonePos * zonePos * zonePos;
-                    alpha = Math.max(0, spotBrightness - zonePos);
+                    alpha = spotBrightness;
                 }
                 else {
-                    // non-lit segments get minimum brightness
-                    alpha = minBri;
+                    // non-lit segments get shifting min brightness pattern
+                    // build inexpensive but complex-looking pattern using precalculated point data
+                    float w = (float) (10.0 * ((1.0-(point.elevation / Math.PI)) * (point.xn+point.yn)));
+                    alpha = (minBri + briShift * TEMath.trianglef(currentCycle+w));
                 }
 
                 // clear and reset alpha channel

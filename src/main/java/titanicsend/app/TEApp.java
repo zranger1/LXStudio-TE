@@ -120,7 +120,7 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(Checkers.class);
     lx.registry.addPattern(Circuitry.class);
     lx.registry.addPattern(EdgeFall.class);
-    lx.registry.addPattern(EdgeSpotlights.class);
+    lx.registry.addPattern(FrameBrights.class);
     lx.registry.addPattern(EdgeKITT.class);
     lx.registry.addPattern(EdgeRunner.class);
     lx.registry.addPattern(FollowThatStar.class);
