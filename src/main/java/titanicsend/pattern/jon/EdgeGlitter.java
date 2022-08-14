@@ -4,6 +4,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LinkedColorParameter;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import titanicsend.model.TEEdgeModel;
@@ -19,14 +20,14 @@ public class EdgeGlitter extends TEAudioPattern {
     Random prng;
     float cycleCount;
     double lastCycle;
-    protected final CompoundParameter beatsPerCycle = (CompoundParameter)
+    protected final CompoundParameter cycleLength = (CompoundParameter)
             new CompoundParameter("Measures", 2, 1, 16)
                     .setUnits(LXParameter.Units.INTEGER)
-                    .setDescription("Number of measures between light shifts");
+                    .setDescription("Number of measures between segment shifts");
     protected final CompoundParameter zonesPerEdge = (CompoundParameter)
             new CompoundParameter("Zones", 20, 1, 60)
                     .setUnits(LXParameter.Units.INTEGER)
-                    .setDescription("Number of light zones per edge");
+                    .setDescription("Total number of light segments edge");
 
     public final CompoundParameter minBrightness =
             new CompoundParameter("BG Bri", 0.125, 0.0, 1)
@@ -34,21 +35,30 @@ public class EdgeGlitter extends TEAudioPattern {
 
     public final CompoundParameter minHeight =
             new CompoundParameter("Height", 0., 0.0, 1)
-                    .setDescription("Min starting height for effect");
+                    .setDescription("Min starting height for bright lights");
 
     protected final CompoundParameter minLit = (CompoundParameter)
             new CompoundParameter("MinLit", 3, 0, 60)
                     .setUnits(LXParameter.Units.INTEGER)
-                    .setDescription("Min lit zones per edge");
+                    .setDescription("Min lit segments per edge");
 
     protected final CompoundParameter maxLit = (CompoundParameter)
             new CompoundParameter("MaxLit", 7, 1, 60)
                     .setUnits(LXParameter.Units.INTEGER)
-                    .setDescription("Max lit zones per edge");
+                    .setDescription("Max lit segments per edge");
 
     public final CompoundParameter energy =
             new CompoundParameter("Energy", .75, 0, 1)
                     .setDescription("Depth of light pulse");
+
+    public final BooleanParameter sync =
+            new BooleanParameter("Sync", true)
+                    .setDescription("Autosync segment changes to measure");
+
+    public final BooleanParameter change =
+            new BooleanParameter("Change", false)
+                    .setMode(BooleanParameter.Mode.MOMENTARY)
+                    .setDescription("New light segments NOW!");
 
     public final LinkedColorParameter color =
             registerColor("Color", "color", ColorType.PRIMARY,
@@ -57,12 +67,15 @@ public class EdgeGlitter extends TEAudioPattern {
     public EdgeGlitter(LX lx) {
         super(lx);
         addParameter("energy", energy);
-        addParameter("beatsPerCycle", beatsPerCycle);
+        addParameter("beatsPerCycle", cycleLength);
         addParameter("zoneCount", zonesPerEdge);
         addParameter("minLit", minLit);
         addParameter("maxLit", maxLit);
         addParameter("minBri", minBrightness);
         addParameter("height", minHeight);
+        addParameter("sync", sync);
+        addParameter("change", change);
+
         prng = new Random();
         lastCycle = 99f; // trigger immediate start;
         cycleCount = 0f;
@@ -89,14 +102,24 @@ public class EdgeGlitter extends TEAudioPattern {
         float currentCycle = (float) measure();
         float currentBeat = (float) getTempo().basis();
 
-        if (currentCycle < lastCycle) {
-            if (cycleCount >= beatsPerCycle.getValuef()) {
-                seed = System.currentTimeMillis();
-                cycleCount = 0;
+        // if autosync is enabled, we change lights every cycleLength measures.
+        if (sync.getValueb()) {
+            if (currentCycle < lastCycle) {
+                if (cycleCount >= cycleLength.getValuef()) {
+                    seed = System.currentTimeMillis();
+                    cycleCount = 0;
+                }
+                cycleCount++;
             }
-            cycleCount++;
         }
+        // pressing the "Change" button doesn't disrupt ongoing beat/measure counting
+        // if autosync is operating.
+        if (change.getValueb()) {
+            seed = System.currentTimeMillis();
+        }
+
         lastCycle = currentCycle;
+
         prng.setSeed(seed);
 
         // pick up the current color
