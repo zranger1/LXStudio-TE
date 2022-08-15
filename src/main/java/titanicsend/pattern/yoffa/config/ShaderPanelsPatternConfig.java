@@ -229,8 +229,8 @@ public class ShaderPanelsPatternConfig {
         }
         @Override
         protected List<PatternEffect> createEffects() {
-            return List.of(new NativeShaderPatternEffect("glassbricks.fs",
-                    PatternTarget.allPanelsAsCanvas(this)));
+            return List.of(new NativeShaderPatternEffect("trianglefactory.fs",
+                    PatternTarget.allPointsAsCanvas(this)));
         }
     }
 
