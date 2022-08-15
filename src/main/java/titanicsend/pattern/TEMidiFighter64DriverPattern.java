@@ -6,10 +6,6 @@ import heronarts.lx.midi.*;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.studio.LXStudio;
-import heronarts.lx.studio.ui.device.UIDevice;
-import heronarts.lx.studio.ui.device.UIDeviceControls;
-import heronarts.p4lx.ui.UI2dContainer;
 import titanicsend.pattern.mf64.*;
 
 
@@ -108,8 +104,8 @@ public class TEMidiFighter64DriverPattern extends TEPattern implements LXMidiLis
   // looking at the device, the buttons correspond to what you see here onscreen.
   private static final int[] buttonColors = {
     LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA,
-    LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA,
-    LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA, LED_AQUA,
+    LED_RED, LED_ORANGE, LED_YELLOW, LED_GREEN, LED_BLUE_AQUA, LED_AZURE, LED_MAGENTA, LED_WHITE,
+    LED_RED_DIM, LED_ORANGE_DIM, LED_YELLOW_DIM, LED_GREEN_DIM, LED_BLUE_AQUA_DIM, LED_AZURE_DIM, LED_MAGENTA_DIM, LED_GRAY_DIM,
     LED_RED, LED_ORANGE, LED_YELLOW, LED_GREEN, LED_BLUE_AQUA, LED_AZURE, LED_MAGENTA, LED_WHITE,
     LED_RED_DIM, LED_ORANGE_DIM, LED_YELLOW_DIM, LED_GREEN_DIM, LED_BLUE_AQUA_DIM, LED_AZURE_DIM, LED_MAGENTA_DIM, LED_GRAY_DIM,
     LED_RED, LED_ORANGE, LED_YELLOW, LED_GREEN, LED_BLUE_AQUA, LED_AZURE, LED_MAGENTA, LED_WHITE,
@@ -132,12 +128,15 @@ public class TEMidiFighter64DriverPattern extends TEPattern implements LXMidiLis
   private final MF64SpiralSquares ssquare = new MF64SpiralSquares(this);
   private final MF64RandomPanel randomPanel = new MF64RandomPanel(this);
   private final MF64EdgeSparks eSparks = new MF64EdgeSparks(this);
+  private final MF64Spinwheel spin = new MF64Spinwheel(this);
+  private final MF64XWave xwave = new MF64XWave(this);
 
 
   private final TEMidiFighter64Subpattern[] patterns = {
-    ring, logger, logger, logger, logger, logger, logger, logger,
+
     logger, logger, logger, logger, logger, logger, logger, logger,
-    logger, logger, logger, logger, logger, logger, logger, logger,
+    spin, spin, spin, spin, spin, spin, spin, spin,
+    xwave, xwave, xwave, xwave, xwave, xwave, xwave, xwave,
     eSparks, eSparks, eSparks, eSparks, eSparks, eSparks, eSparks, eSparks,
     randomPanel, randomPanel, randomPanel, randomPanel, randomPanel, randomPanel, randomPanel, randomPanel,
     ssquare, ssquare, ssquare, ssquare, ssquare, ssquare, ssquare, ssquare,
@@ -349,5 +348,7 @@ public class TEMidiFighter64DriverPattern extends TEPattern implements LXMidiLis
     this.ssquare.run(deltaMs,colors);
     this.randomPanel.run(deltaMs,colors);
     this.eSparks.run(deltaMs,colors);
+    this.spin.run(deltaMs,colors);
+    this.xwave.run(deltaMs,colors);
   }
 }
