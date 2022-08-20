@@ -21,25 +21,30 @@ package titanicsend.app;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.function.Function;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXPlugin;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.pattern.color.GradientPattern;
 import heronarts.lx.pattern.texture.NoisePattern;
 import heronarts.lx.pattern.texture.SparklePattern;
 import heronarts.lx.studio.LXStudio;
 import processing.core.PApplet;
-import titanicsend.app.autopilot.TEPatternLibrary;
-import titanicsend.app.autopilot.TEPhrase;
-import titanicsend.app.autopilot.TEUserInterface;
+import titanicsend.app.autopilot.*;
 import titanicsend.model.TEWholeModel;
 import titanicsend.output.GPOutput;
 import titanicsend.output.GrandShlomoStation;
 import titanicsend.pattern.TEMidiFighter64DriverPattern;
-import titanicsend.pattern.ben.BassLightning;
+import titanicsend.pattern.ben.*;
 import titanicsend.pattern.cesar.*;
 import titanicsend.pattern.jeff.*;
+import titanicsend.pattern.jeff.Fireflies;
 import titanicsend.pattern.jon.*;
 import titanicsend.pattern.mike.*;
 import titanicsend.pattern.pixelblaze.*;
@@ -51,7 +56,6 @@ import titanicsend.pattern.yoffa.config.ShaderEdgesPatternConfig;
 import titanicsend.pattern.yoffa.media.BasicImagePattern;
 import titanicsend.pattern.yoffa.media.ReactiveHeartPattern;
 import titanicsend.pattern.yoffa.config.ShaderPanelsPatternConfig;
-import titanicsend.app.autopilot.TEShowKontrol;
 import titanicsend.util.TE;
 
 public class TEApp extends PApplet implements LXPlugin  {
@@ -90,6 +94,31 @@ public class TEApp extends PApplet implements LXPlugin  {
 
     new LXStudio(this, flags, this.model);
     this.surface.setTitle(this.model.name);
+
+    String logFileName = LOG_FILENAME_FORMAT.format(Calendar.getInstance().getTime());
+    LX.setLogFile(new File(flags.mediaPath, LX.Media.LOGS.getDirName() + File.separator + logFileName));
+  }
+
+  public void loadCLfile(LX lx) {
+    // Hack to load CLI filename in PApplet environment
+    if (projectFileName != null) {
+      final File finalProjectFile =lx.getMediaFile(LX.Media.PROJECTS, projectFileName);
+    
+      if (finalProjectFile.getName().endsWith(".lxs")) {
+        lx.preferences.schedulerEnabled.setValue(true);
+        LX.log("Opening schedule file: " + finalProjectFile);
+        lx.scheduler.openSchedule(finalProjectFile, true);
+      } else {
+        try {
+          if (finalProjectFile.exists()) {
+            LX.log("Opening project file passed as argument: " + projectFileName);
+            lx.openProject(finalProjectFile);
+          }          
+        } catch (Exception x) {
+          LX.error(x, "Exception loading project: " + x.getLocalizedMessage());
+        }
+      }
+    }
   }
 
   public TEUserInterface.AutopilotComponent autopilotComponent;
@@ -124,14 +153,20 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(EdgeKITT.class);
     lx.registry.addPattern(EdgeRunner.class);
     lx.registry.addPattern(FollowThatStar.class);
+    lx.registry.addPattern(FrameBrights.class);
     lx.registry.addPattern(FourStar.class);
     lx.registry.addPattern(Iceflow.class);
     lx.registry.addPattern(Phasers.class);
     lx.registry.addPattern(PixelblazeSandbox.class);
     lx.registry.addPattern(PBAudio1.class);
+    lx.registry.addPattern(Audio1.class);
     lx.registry.addPattern(PBXorcery.class);
+
     lx.registry.addPattern(PBXorcery2.class);
+    lx.registry.addPattern(Xorcery.class);
+    lx.registry.addPattern(XorceryDiamonds.class);
     lx.registry.addPattern(PBFireworkNova.class);
+    lx.registry.addPattern(FireworkNova.class);
     lx.registry.addPattern(PixelblazeParallel.class);
     lx.registry.addPattern(PixelStats.class);
     lx.registry.addPattern(SolidEdge.class);
@@ -154,9 +189,18 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(ArtStandards.class);
     lx.registry.addEffect(titanicsend.effect.BasicEffect.class);
     lx.registry.addEffect(titanicsend.effect.Kaleidoscope.class);
-    lx.registry.addPatterns(OrganicPatternConfig.getPatterns());
-    lx.registry.addPatterns(ShaderPanelsPatternConfig.getPatterns());
-    lx.registry.addPatterns(ShaderEdgesPatternConfig.getPatterns());
+    lx.registry.addEffect(titanicsend.effect.NoGapEffect.class);
+
+    @SuppressWarnings("unchecked")
+    Function<Class<?>, Class<LXPattern>[]> patternGetter =
+        (Class<?> patternConfigClass) ->
+            (Class<LXPattern>[]) Arrays.stream(patternConfigClass.getDeclaredClasses())
+                .filter(LXPattern.class::isAssignableFrom)
+                .toArray(Class[]::new);
+
+    lx.registry.addPatterns(patternGetter.apply(OrganicPatternConfig.class));
+    lx.registry.addPatterns(patternGetter.apply(ShaderPanelsPatternConfig.class));
+    lx.registry.addPatterns(patternGetter.apply(ShaderEdgesPatternConfig.class));
 
     // Test/debug patterns
     lx.registry.addPattern(ModelDebugger.class);
@@ -187,9 +231,12 @@ public class TEApp extends PApplet implements LXPlugin  {
       TE.log("Failed to create GigglePixel broadcaster: " + e.getMessage());
     }
 
+    // create our historian instance
+    TEHistorian history = new TEHistorian();
+
     // create our Autopilot instance, run in general engine loop to
     // ensure performance under load
-    autopilot = new TEAutopilot(lx, library);
+    autopilot = new TEAutopilot(lx, library, history);
     lx.engine.addLoopTask(autopilot);
 
     // listener to toggle on the autopilot instance's enabled flag
@@ -219,6 +266,8 @@ public class TEApp extends PApplet implements LXPlugin  {
 
     GPOutput gpOutput = new GPOutput(lx, this.gpBroadcaster);
     lx.addOutput(gpOutput);
+    
+    loadCLfile(lx);
   }
 
   private TEPatternLibrary initializePatternLibrary(LX lx) {
@@ -255,11 +304,11 @@ public class TEApp extends PApplet implements LXPlugin  {
     l.addPattern(ShaderPanelsPatternConfig.NeonTriangles.class, covPanels, cNonConforming, chorus);
     l.addPattern(OrganicPatternConfig.NeonSnake.class, covPanels, cPalette, chorus);
     l.addPattern(ShaderPanelsPatternConfig.Mondelbrot.class, covPanels, cNonConforming, chorus);
-    l.addPattern(ShaderPanelsPatternConfig.JetStream.class, covPanels, cNonConforming, chorus);
     l.addPattern(Phasers.class, covPanels, cPalette, chorus);
     l.addPattern(ShaderPanelsPatternConfig.PulsingPetriDish.class, covPanels, cNonConforming, chorus);
     l.addPattern(FourStar.class, covPanelPartial, cPalette, chorus);
-    //l.addPattern(ShaderPanelsPatternConfig.PulsingHeart.class, covPanels, cNonConforming, chorus);
+    l.addPattern(ShaderPanelsPatternConfig.Electric.class, covPanelPartial, cPalette, chorus);
+    l.addPattern(ShaderPanelsPatternConfig.AudioTest2.class, covBoth, cNonConforming, chorus);
 
     // DOWN patterns
     l.addPattern(GradientPattern.class, covPanelPartial, cPalette, down);
@@ -277,10 +326,10 @@ public class TEApp extends PApplet implements LXPlugin  {
     l.addPattern(OrganicPatternConfig.WavyEdges.class, covPanelPartial, cNonConforming, up);
     l.addPattern(SparklePattern.class, covBoth, cNonConforming, up);
     l.addPattern(ShaderPanelsPatternConfig.Electric.class, covPanelPartial, cNonConforming, up);
-    l.addPattern(ShaderPanelsPatternConfig.JetStream.class, covPanels, cNonConforming, up);
     l.addPattern(ShaderPanelsPatternConfig.Marbling.class, covPanels, cNonConforming, up);
     l.addPattern(ShaderPanelsPatternConfig.SlitheringSnake.class, covPanelPartial, cPalette, up);
     l.addPattern(Fireflies.class, covPanelPartial, cPalette, up);
+    l.addPattern(PBAudio1.class, covPanelPartial, cPalette, up);
 
     // misc patterns
     //l.addPattern(EdgeProgressions.class, covEdges, colorWhite, chorus);
@@ -325,6 +374,10 @@ public class TEApp extends PApplet implements LXPlugin  {
     // will run a draw-loop.
   }
 
+  private static final DateFormat LOG_FILENAME_FORMAT = new SimpleDateFormat("'LXStudio-TE-'yyyy.MM.dd-HH.mm.ss'.log'");
+
+  private static String projectFileName = null;
+
   /**
    * Main interface into the program. Two modes are supported, if the --headless
    * flag is supplied then a raw CLI version of LX is used. If not, then we embed
@@ -357,6 +410,7 @@ public class TEApp extends PApplet implements LXPlugin  {
         }
       } else if (args[i].endsWith(".lxp")) {
         try {
+          projectFileName = args[i];
           projectFile = new File(args[i]);
         } catch (Exception x) {
           LX.error(x, "Command-line project file path invalid: " + args[i]);

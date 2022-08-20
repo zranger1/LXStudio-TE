@@ -28,7 +28,7 @@ public class FrameBrights extends TEAudioPattern {
                     .setUnits(LXParameter.Units.INTEGER)
                     .setDescription("Number of measures between segment shifts");
     protected final CompoundParameter zonesPerEdge = (CompoundParameter)
-            new CompoundParameter("Zones", 20, 1, MAX_ZONES)
+            new CompoundParameter("Zones", 30, 1, MAX_ZONES)
                     .setUnits(LXParameter.Units.INTEGER)
                     .setDescription("Total lit segments per edge");
 
@@ -41,12 +41,13 @@ public class FrameBrights extends TEAudioPattern {
                     .setDescription("Min starting height for bright lights");
 
     protected final CompoundParameter minLit = (CompoundParameter)
-            new CompoundParameter("MinLit", 2, 0, MAX_ZONES)
+            new CompoundParameter("MinLit", 1, 0, MAX_ZONES)
                     .setUnits(LXParameter.Units.INTEGER)
                     .setDescription("Min lit segments per edge");
 
     protected final CompoundParameter maxLit = (CompoundParameter)
-            new CompoundParameter("MaxLit", 5, 1, MAX_ZONES)
+
+            new CompoundParameter("MaxLit", 3, 1, MAX_ZONES)
                     .setUnits(LXParameter.Units.INTEGER)
                     .setDescription("Max lit segments per edge");
 
@@ -88,10 +89,10 @@ public class FrameBrights extends TEAudioPattern {
     // choose between minLit and maxLit random segments of an edge to light
     // and prepare the data necessary to do quickly
     void lightRandomSegments(int zoneCount, int minLit, int maxLit) {
-        int nLit = Math.max(minLit,(int) Math.round(maxLit * prng.nextFloat()));
+        int nLit = Math.max(minLit, Math.round(maxLit * prng.nextFloat()));
 
         // set all segments dark
-        for (int i = 0; i < (int) zoneCount; i++) {
+        for (int i = 0; i < zoneCount; i++) {
             zoneIsLit[i] = false;
         }
 

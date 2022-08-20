@@ -121,6 +121,10 @@ public class TEWholeModel extends LXModel {
   public boolean isPanelPoint(int index) {
     return index >= panelPoints.get(0).index && index <= panelPoints.get(panelPoints.size() - 1).index;
   }
+  
+  public boolean isGapPoint(LXPoint p) {
+    return p.equals(this.gapPoint);
+  }
 
   /** Builds structures that compute spacial relationships for edges,
    *  such as edges that are mirrored fore-aft and port-starboard.
@@ -202,6 +206,8 @@ public class TEWholeModel extends LXModel {
       String edgeKind = tokens[1];
       String socketCfg = tokens[2];
 
+      if (socketCfg.startsWith("x10")) socketCfg = "uncontrolled";
+
       boolean dark;
       boolean fwd = true;
       switch (edgeKind) {
@@ -282,9 +288,19 @@ public class TEWholeModel extends LXModel {
       String[] tokens = line.split("\\t");
       assert tokens.length == 11;
       String panelId = tokens[0];
+      String startVertex = tokens[7];
       String startingEdgeId = tokens[8];
       if (startingEdgeId == "") {
         throw new IllegalStateException("Panel " + panelId + " has empty starting edge ID");
+      }
+      tokens = startingEdgeId.split("-");
+      assert tokens.length == 2;
+      if (tokens[0].equals(startVertex)) {
+        // pass
+      } else if (tokens[1].equals(startVertex)) {
+        startingEdgeId = tokens[1] + "-" + tokens[0];
+      } else {
+        throw new IllegalStateException("Panel " + panelId + " has impossible signal plan");
       }
       rv.put(panelId, startingEdgeId);
     }
@@ -420,6 +436,8 @@ public class TEWholeModel extends LXModel {
       vh.add(e2.v1);
       TEVertex[] vertexes = vh.toArray(new TEVertex[0]);
       assert vertexes.length == 3;
+
+      if (panelType.startsWith("x10")) panelType = "lit";
 
       boolean lit = panelType.contains(".");
       String outputConfig = panelType;
