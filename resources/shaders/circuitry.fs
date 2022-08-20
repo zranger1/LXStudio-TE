@@ -12,17 +12,17 @@ mat2 rot(float a) {
 }
 
 vec3 fractal(vec2 p) {
-    p.x += 0.051333 * mod(iTime,10.);
+    p.x += .05 * 2*(-0.5+sinPhaseBeat);
 
     float ot1 = 1000., ot2=ot1, it=0.;
 
     for (float i = 0.; i < 4.; i++) {
         p=abs(p);
         p=p/clamp(p.x*p.y,0.15,5.)-vec2(1.5,1.);
-        float m = abs(p.x+sin(iTime*2.));
+        float m = abs(p.x/p.y+sin(iTime*2.));
         if (m<=ot1) {
-            //ot1=m+step(fract(iTime*0.5+float(i)*.05),0.15*abs(p.y));
-            ot1=m+smoothstep(0.,fract(iTime+float(i)*.05),0.15*abs(p.y));
+            ot1=m+step(fract(iTime*0.5+float(i)*.05),0.05*abs(p.y));
+            //ot1=m+smoothstep(0.,fract(iTime*0.5+float(i)*.05),.005*abs(p.y));
             it=i;
         }
         ot2=min(ot2,length(p));
@@ -41,6 +41,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     float aa=2.;
 
     vec2 sc=1./iResolution.xy/aa;
+    uv.x = 0.5-abs(uv.x);
 
     vec3 c=vec3(0.);
     for (float i=-aa; i < aa; i++) {

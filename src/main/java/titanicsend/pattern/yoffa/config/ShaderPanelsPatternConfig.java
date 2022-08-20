@@ -225,8 +225,8 @@ public class ShaderPanelsPatternConfig {
         }
         @Override
         protected List<PatternEffect> createEffects() {
-            return List.of(new NativeShaderPatternEffect("trianglefactory.fs",
-                    PatternTarget.allPointsAsCanvas(this)));
+            return List.of(new NativeShaderPatternEffect("circuitry.fs",
+                    PatternTarget.splitPanelSections(this)));
         }
     }
 
