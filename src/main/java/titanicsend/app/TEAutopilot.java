@@ -3,6 +3,7 @@ package titanicsend.app;
 import heronarts.lx.LX;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.Tempo;
+import heronarts.lx.LX.ProjectListener.Change;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.OscMessage;
@@ -14,13 +15,12 @@ import titanicsend.app.autopilot.utils.TETimeUtils;
 import titanicsend.util.TE;
 import titanicsend.util.TEMath;
 
-import java.sql.Array;
-import java.util.ArrayList;
+import java.io.File;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class TEAutopilot implements LXLoopTask {
+public class TEAutopilot implements LXLoopTask, LX.ProjectListener {
     private boolean enabled = false;
 
     // should we send OSC messages to lasers about
@@ -31,9 +31,9 @@ public class TEAutopilot implements LXLoopTask {
     private final int MISPREDICTED_FADE_OUT_BARS = 2;
     private final int PREV_FADE_OUT_BARS = 2;
 
-    // when we're in oscBeatOnlyModeOn=true, this is how long
+    // when we're inot getting OSC phrase messages, this is how long
     // we wait to change phrases
-    private final int OSC_BEAT_ONLY_PHRASE_LEN_BARS = 32;
+    private final int SYNTHETIC_PHRASE_LEN_BARS = 32;
 
     // number of bars after a chorus to continue leaving
     // FX channels visible
@@ -67,7 +67,14 @@ public class TEAutopilot implements LXLoopTask {
     // on the next downbeat chose a phrase and enter it! this is how
     // non-rekordbox phrase mode is engaged
     private static long OSC_PHRASE_TIMEOUT_MS = 2 * 60 * 1000;
+
+    // after a while (ie: 2 min) without receiving an OSC msg,
+    // non-OSC mode is engaged
+    private static long OSC_TIMEOUT_MS = 30 * 1000;
     private boolean oscBeatModeOnlyOn = false;
+
+    // if we're not recieving OSC at all
+    private boolean noOscModeOn = false;
 
     // how long in between palette changes
     // palette changes only happen on new CHORUS phrase changes
@@ -78,9 +85,6 @@ public class TEAutopilot implements LXLoopTask {
     // OSC message related fields
     private ConcurrentLinkedQueue<TEOscMessage> unprocessedOscMessages;
     private long lastOscMessageReceivedAt;
-
-    // if we detect BPM is off by more than this, adjust
-    private static double BPM_ERROR_ADJUST = 1.0;
 
     // our historical tracking object, keeping state about events in past
     public TEHistorian history;
@@ -130,6 +134,8 @@ public class TEAutopilot implements LXLoopTask {
 
         // start any logic that begins with being enabled
         setEnabled(enabled);
+        
+        lx.addProjectListener(this);
     }
 
     /**
@@ -159,9 +165,20 @@ public class TEAutopilot implements LXLoopTask {
         
         oldNextFadeOutMode = false;
         prevFadeOutMode = false;
+        
+        // If the channel indexes didn't exist, it might just be a project with too few channels.  Bail on this.
+        if (curChannel == null || nextChannel == null || triggerChannel == null || strobesChannel == null) {
+        	// Cancel autopilot
+        	TE.log("Cancelling autopilot, special channels not found.");
+        	this.enabled = false;
+        	return;
+        }
 
         // set palette timer
         history.startPaletteTimer();
+
+        // remap pattern objects
+        this.library.indexPatterns();
     }
 
     /**
@@ -174,13 +191,21 @@ public class TEAutopilot implements LXLoopTask {
     protected void onOscMessage(OscMessage msg) {
         try {
             TEOscMessage oscTE = new TEOscMessage(msg);
-
             if (!isEnabled()) {
                 // if autopilot isn't enabled, don't bother tracking these
                 return;
 
             } else {
                 //TE.log("Adding OSC message to queue: %s", address);
+                history.setLastOscMsgAt(oscTE.timestamp);
+
+                // if we'd previously entered No OSC mode, let's turn that off
+                if (noOscModeOn) {
+                    noOscModeOn = false;
+                    TE.log("No OSC mode OFF! We got OSC message");
+                }
+
+                // then add message to queue to be processed on next loop()
                 unprocessedOscMessages.add(oscTE);
             }
         } catch (Exception e) {
@@ -200,9 +225,16 @@ public class TEAutopilot implements LXLoopTask {
      */
     public void changePaletteSwatch(boolean pickRandom, boolean immediate, int numBarsTransition) {
         // should we change the transition duration?
-        if (numBarsTransition > 0) {
-            double transitionDurationMs = TETimeUtils.calcPhraseLengthMs(lx.engine.tempo.bpm(), numBarsTransition);
-            lx.engine.palette.transitionTimeSecs.setValue(transitionDurationMs);
+        try {
+            if (numBarsTransition > 0) {
+                double transitionDurationMs = TETimeUtils.calcPhraseLengthMs(lx.engine.tempo.bpm(), numBarsTransition);
+                lx.engine.palette.transitionTimeSecs.setValue(transitionDurationMs);
+            } else {
+                lx.engine.palette.transitionTimeSecs.setValue(0);
+            }
+        } catch (Exception e) {
+            TE.err("Error changing palette transition duration!");
+            e.printStackTrace();
         }
 
         // pick a random swatch
@@ -253,11 +285,13 @@ public class TEAutopilot implements LXLoopTask {
             // oscBeatModeOnlyOn=true and trigger phrases ourselves!
             this.resetHistory();
             oscBeatModeOnlyOn = true;
+            noOscModeOn = false;
             TE.log("OSC beat-only mode activated");
 
             // now trigger a phrase (DOWN is probably safest)
             String syntheticOscAddr = TEOscMessage.makeOscPhraseChangeAddress(TEPhrase.DOWN);
             onPhraseChange(syntheticOscAddr, beatAt);
+            history.setLastSynthethicPhraseAt(beatAt);
 
         } else {
             // we've been in osc beat only mode for a while now, we just need to decide if it's
@@ -270,10 +304,11 @@ public class TEAutopilot implements LXLoopTask {
             double repeatedPhraseLengthBars = history.getRepeatedPhraseBarProgress(lx.engine.tempo.bpm());
 
             // otherwise: if it's been OSC_BEAT_ONLY_PHRASE_LEN_BARS bars, let's change
-            if (OSC_BEAT_ONLY_PHRASE_LEN_BARS - repeatedPhraseLengthBars < 1) {
+            if (SYNTHETIC_PHRASE_LEN_BARS - repeatedPhraseLengthBars < 1) {
                 // now trigger the next phrase
                 String syntheticOscAddr = TEOscMessage.makeOscPhraseChangeAddress(nextPhrase);
                 TE.log("OSC beat-only mode: triggering synthetic phrase=%s", syntheticOscAddr);
+                history.setLastSynthethicPhraseAt(beatAt);
                 onPhraseChange(syntheticOscAddr, beatAt);
             }
         }
@@ -327,7 +362,6 @@ public class TEAutopilot implements LXLoopTask {
                     onBeatEvent(oscTE);
 
                 } else if (TEOscMessage.isPhraseChange(address)) {
-
                     // let's make sure this is a valid phrase change!
                     int msSinceLastMasterChange = history.calcMsSinceLastDeckChange();
                     int msSinceLastDownbeat = history.calcMsSinceLastDownbeat();
@@ -346,8 +380,8 @@ public class TEAutopilot implements LXLoopTask {
 
                     // make decision -- this is configurable. I found that a pretty zero tolerance policy was most effective
                     if (wasRecentMasterChange || wasRecentPhraseChange) {
-                        TE.log("isInMiddleOfMeasure=%s, wasRecentMasterChange=%s, wasRecentPhraseChange=%s",
-                                isInMiddleOfMeasure, wasRecentMasterChange, wasRecentPhraseChange);
+                        //TE.log("isInMiddleOfMeasure=%s, wasRecentMasterChange=%s, wasRecentPhraseChange=%s",
+                        //        isInMiddleOfMeasure, wasRecentMasterChange, wasRecentPhraseChange);
                         //TE.log("Not a real phrase event -> filtering!");
                         continue;
                     }
@@ -367,6 +401,40 @@ public class TEAutopilot implements LXLoopTask {
         } catch (Exception e) {
             TE.err("ERROR - unexpected exception in Autopilot.run(): %s", e.toString());
             e.printStackTrace(System.out);
+        }
+
+        // should we enter into non-OSC mode?
+        try {
+            // if we're not in this mode already, let's test to make sure
+            if (!noOscModeOn && (now - history.getLastOscMsgAt() > OSC_TIMEOUT_MS)) {
+                // it has been so long without a phrase that we need to enter
+                // oscBeatModeOnlyOn=true and trigger phrases ourselves!
+                this.resetHistory();
+                noOscModeOn = true;
+                oscBeatModeOnlyOn = false;
+
+                // now trigger a phrase (DOWN is probably safest)
+                String syntheticOscAddr = TEOscMessage.makeOscPhraseChangeAddress(TEPhrase.DOWN);
+                TE.log("No OSC mode activated: triggering synthethic prhase=%s", syntheticOscAddr);
+                history.setLastSynthethicPhraseAt(now);
+                onPhraseChange(syntheticOscAddr, (long) now);
+
+            // if we are in this mode already, just check if we need to trigger another phrase
+            } else if (noOscModeOn) {
+                double msInPhrase = TETimeUtils.calcPhraseLengthMs(lx.engine.tempo.bpm(), SYNTHETIC_PHRASE_LEN_BARS);
+                if (now - history.getLastSynthethicPhraseAt() > msInPhrase) {
+                    // time to trigger a new phrase
+                    TEPhrase next = guessNextPhrase(curPhrase);
+                    String syntheticOscAddr = TEOscMessage.makeOscPhraseChangeAddress(next);
+                    history.setLastSynthethicPhraseAt(now);
+                    TE.log("No OSC mode, another phrase: triggering synthetic phrase=%s", syntheticOscAddr);
+                    onPhraseChange(syntheticOscAddr, (long) now);
+                }
+            }
+
+        } catch (Exception oscBeatOnlyException) {
+            TE.err("No OSC mode check, something went wrong: %s", oscBeatOnlyException);
+            oscBeatOnlyException.printStackTrace();
         }
 
         // get some useful stats about the current phrase
@@ -443,39 +511,44 @@ public class TEAutopilot implements LXLoopTask {
      * @param curPhraseLenBars
      */
     private void updateFXChannels(double curPhraseLenBars) {
+    	//Avoid crash
         // first, set strobes
-        double newStrobeChannelVal = -1;
-        if (strobesChannel.fader.getValue() > 0.0 && curPhraseLenBars < STROBES_AT_CHORUS_LENGTH_BARS) {
-            newStrobeChannelVal = TEMath.ease(
-                    TEMath.EasingFunction.LINEAR_RAMP_DOWN,
-                    curPhraseLenBars, 0.0, STROBES_AT_CHORUS_LENGTH_BARS,
-                    LEVEL_OFF, LEVEL_FULL);
-
-        } else if (curPhraseLenBars >= PREV_FADE_OUT_BARS) {
-            newStrobeChannelVal = LEVEL_OFF;
-        }
-
-        if (newStrobeChannelVal >= 0) {
-            //TE.log("Strobes: Setting fader=%s to %f", TEChannelName.STROBES, newStrobeChannelVal);
-            TEMixerUtils.setFaderTo(lx, TEChannelName.STROBES, newStrobeChannelVal);
-        }
+	    if (strobesChannel != null) {
+	        double newStrobeChannelVal = -1;
+	        if (strobesChannel.fader.getValue() > 0.0 && curPhraseLenBars < STROBES_AT_CHORUS_LENGTH_BARS) {
+	            newStrobeChannelVal = TEMath.ease(
+	                    TEMath.EasingFunction.LINEAR_RAMP_DOWN,
+	                    curPhraseLenBars, 0.0, STROBES_AT_CHORUS_LENGTH_BARS,
+	                    LEVEL_OFF, LEVEL_FULL);
+	
+	        } else if (curPhraseLenBars >= PREV_FADE_OUT_BARS) {
+	            newStrobeChannelVal = LEVEL_OFF;
+	        }
+	
+	        if (newStrobeChannelVal >= 0) {
+	            //TE.log("Strobes: Setting fader=%s to %f", TEChannelName.STROBES, newStrobeChannelVal);
+	            TEMixerUtils.setFaderTo(lx, TEChannelName.STROBES, newStrobeChannelVal);
+	        }
+	    }
 
         // now set triggers
-        double newTriggerChannelVal = -1;
-        if (triggerChannel.fader.getValue() > 0.0 && curPhraseLenBars < TRIGGERS_AT_CHORUS_LENGTH_BARS) {
-            newTriggerChannelVal = TEMath.ease(
-                    TEMath.EasingFunction.LINEAR_RAMP_DOWN,
-                    curPhraseLenBars, 0.0, TRIGGERS_AT_CHORUS_LENGTH_BARS,
-                    LEVEL_OFF, LEVEL_FULL);
-
-        } else if (curPhraseLenBars >= TRIGGERS_AT_CHORUS_LENGTH_BARS) {
-            newTriggerChannelVal = LEVEL_OFF;
-        }
-
-        if (newTriggerChannelVal >= 0) {
-            //TE.log("Triggers: Setting fader=%s to %f", TEChannelName.TRIGGERS, newTriggerChannelVal);
-            TEMixerUtils.setFaderTo(lx, TEChannelName.TRIGGERS, newTriggerChannelVal);
-        }
+	    if (triggerChannel != null) {
+	        double newTriggerChannelVal = -1;
+	        if (triggerChannel.fader.getValue() > 0.0 && curPhraseLenBars < TRIGGERS_AT_CHORUS_LENGTH_BARS) {
+	            newTriggerChannelVal = TEMath.ease(
+	                    TEMath.EasingFunction.LINEAR_RAMP_DOWN,
+	                    curPhraseLenBars, 0.0, TRIGGERS_AT_CHORUS_LENGTH_BARS,
+	                    LEVEL_OFF, LEVEL_FULL);
+	
+	        } else if (curPhraseLenBars >= TRIGGERS_AT_CHORUS_LENGTH_BARS) {
+	            newTriggerChannelVal = LEVEL_OFF;
+	        }
+	
+	        if (newTriggerChannelVal >= 0) {
+	            //TE.log("Triggers: Setting fader=%s to %f", TEChannelName.TRIGGERS, newTriggerChannelVal);
+	            TEMixerUtils.setFaderTo(lx, TEChannelName.TRIGGERS, newTriggerChannelVal);
+	        }
+	    }
     }
 
     /**
@@ -507,7 +580,22 @@ public class TEAutopilot implements LXLoopTask {
 
         // trigger the pattern
         channel.goPattern(pattern);
-        channel.goPattern(pattern); // make doubly sure no transition of 100ms happens
+
+        // if we're in a mode where we don't know the exact phrase bounaries
+        // then let's make the transition happen more slowly
+        if (noOscModeOn || oscBeatModeOnlyOn) {
+            channel.transitionEnabled.setValue(true);
+            double secInTransition = TETimeUtils.calcPhraseLengthMs(lx.engine.tempo.bpm(), 8) / 1000.0;
+            channel.transitionTimeSecs.setValue(secInTransition);
+            return;
+        } else {
+            // turn transitions back off if we're in normal phrase OSC mode!
+            channel.transitionEnabled.setValue(false);
+            channel.transitionTimeSecs.setValue(0);
+        }
+
+        // if not, we want this to happen immediately
+        channel.goPattern(pattern);
     }
 
     /**
@@ -528,8 +616,8 @@ public class TEAutopilot implements LXLoopTask {
         this.updatePhraseState(detectedPhrase);
         boolean predictedCorrectly = (oldNextPhrase == curPhrase);
         boolean isSamePhrase = (prevPhrase == curPhrase);
-        TE.log("HIT: %s: [%s -> %s -> %s (?)], (old next: %s) oscBeatModeOnlyOn=%s"
-                , curPhrase, prevPhrase, curPhrase, nextPhrase, oldNextPhrase, oscBeatModeOnlyOn);
+        TE.log("HIT: %s: [%s -> %s -> %s (?)], (old next: %s) OSC beats=%s No OSC=%s"
+                , curPhrase, prevPhrase, curPhrase, nextPhrase, oldNextPhrase, oscBeatModeOnlyOn, noOscModeOn);
 
         // record history for pattern library
         // need to do this before we a) pick new patterns, and b) logPhrase() with historian
@@ -663,17 +751,9 @@ public class TEAutopilot implements LXLoopTask {
 
         // make new active patterns
         if (prevPhrase != curPhrase) {
-            // only play strobes if it's the first chorus phrase in a row
-            LXPattern newStrobesPattern = TEMixerUtils.pickRandomPatternFromChannel(strobesChannel);
-            startPattern(strobesChannel, newStrobesPattern);
             TEMixerUtils.setFaderTo(lx, TEChannelName.STROBES, LEVEL_FULL);
         }
 
-        LXPattern newTriggersPattern = TEMixerUtils.pickRandomPatternFromChannel(triggerChannel);
-        startPattern(triggerChannel, newTriggersPattern);
-
-        // turn on strobes and triggers here, main loop will
-        // turn them off after certain number of bars
         TEMixerUtils.setFaderTo(lx, TEChannelName.TRIGGERS, LEVEL_FULL);
     }
 
@@ -700,8 +780,18 @@ public class TEAutopilot implements LXLoopTask {
         this.enabled = enabled;
 
         if (this.enabled) {
-            TE.log("VJ autoilot enabled!");
-            resetHistory();  // reset TEHistorian state
+        	TE.log("Queued autopilot to start after everything is running.");
+            
+            // Let's do this *after* everything is loaded, shall we?  (JKB mod)
+            lx.engine.addTask(() -> {
+            	// Make sure it didn't get disabled in the meantime, like by a file close!
+            	//if (this.enabled) {
+	                TE.log("VJ autoilot enabled!");
+	                resetHistory();  // reset TEHistorian state
+            	//} else {
+            	//	TE.log("Discarding queued Autopilot launch, it had been disabled when we got around to it.");
+            	//}
+              });
         } else {
             TE.log("VJ autoilot disabled!");
         }
@@ -742,4 +832,56 @@ public class TEAutopilot implements LXLoopTask {
 
         return estimatedNextPhrase;
     }
+
+    // Keep this for possible future reworking of the autopilot startup
+    private boolean wasAutopilotEnabled = false;
+    
+	@Override
+	public void projectChanged(File file, Change change) {
+		if (change == Change.TRY || change == Change.NEW) {
+			// About to do an openFile
+			this.wasAutopilotEnabled = this.enabled;
+			
+			// JKB note: Ok the Change.Open listener gets broadcast *after* the objects are loaded from file,
+			// so I think we'd better release the channel references here
+			releaseProjectReferences();			
+			
+			if (this.enabled) {
+				LX.log("Disabling Autopilot for file open...");
+				// Note! Current TE method only calls setEnabled(true) from the UI element
+				// The UI element doesn't listen to enabled
+				// So the UI element will get out of sync from this, 
+				//    but it's fine because it will get set by the next file open...
+				setEnabled(false);
+			}			
+		} else if (change == Change.OPEN) {
+			// This could be the first file open or a later file open.
+			LX.log("Autopilot detected completion of openProject(), defensive positions have been taken (or is first file open)...");
+		    
+			// Don't need this, it gets called by:
+			//   TEUserInterface.AutopilotComponent.autopilotEnabledToggle restoring from saved file...
+			//   ...which triggers TEApp.autopilotEnableListener
+			//   ...which calls setEnable(savedFromFile)
+			//resetHistory();
+            
+			// Don't need this either, see above note.  But in the future you might want to do this here, so leaving for reference:
+			/*
+			if (this.wasAutopilotEnabled) {
+				LX.log("Re-enabling autopilot after file open");
+				this.wasAutopilotEnabled = false;
+				setEnabled(true);
+			}
+			*/
+		}
+	}
+	
+	private void releaseProjectReferences() {
+		this.prevChannel = null;
+		this.curChannel = null;
+		this.nextChannel = null;
+		this.oldNextChannel = null;
+		this.triggerChannel = null;
+		this.strobesChannel = null;
+        this.fxChannel = null;
+	}
 }

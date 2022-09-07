@@ -29,6 +29,8 @@ import java.util.function.Function;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXPlugin;
+import heronarts.lx.LX.ProjectListener.Change;
+import heronarts.lx.midi.surface.APC40Mk2;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.pattern.color.GradientPattern;
@@ -40,12 +42,15 @@ import titanicsend.app.autopilot.*;
 import titanicsend.model.TEWholeModel;
 import titanicsend.output.GPOutput;
 import titanicsend.output.GrandShlomoStation;
+import titanicsend.pattern.TEEdgeTestPattern;
 import titanicsend.pattern.TEMidiFighter64DriverPattern;
+import titanicsend.pattern.TEPanelTestPattern;
 import titanicsend.pattern.ben.*;
 import titanicsend.pattern.cesar.*;
 import titanicsend.pattern.jeff.*;
 import titanicsend.pattern.jeff.Fireflies;
 import titanicsend.pattern.jon.*;
+import titanicsend.pattern.look.*;
 import titanicsend.pattern.mike.*;
 import titanicsend.pattern.pixelblaze.*;
 import titanicsend.pattern.tmc.*;
@@ -53,13 +58,15 @@ import titanicsend.pattern.tom.*;
 import titanicsend.pattern.will.PowerDebugger;
 import titanicsend.pattern.yoffa.config.OrganicPatternConfig;
 import titanicsend.pattern.yoffa.config.ShaderEdgesPatternConfig;
+import titanicsend.pattern.yoffa.effect.BeaconEffect;
 import titanicsend.pattern.yoffa.media.BasicImagePattern;
 import titanicsend.pattern.yoffa.media.ReactiveHeartPattern;
 import titanicsend.pattern.yoffa.config.ShaderPanelsPatternConfig;
 import titanicsend.util.TE;
 
-public class TEApp extends PApplet implements LXPlugin  {
+public class TEApp extends PApplet implements LXPlugin, LX.ProjectListener  {
   private TEWholeModel model;
+  static public TEWholeModel wholeModel;
 
   private static int WIDTH = 1280;
   private static int HEIGHT = 800;
@@ -91,10 +98,11 @@ public class TEApp extends PApplet implements LXPlugin  {
     flags.startMultiThreaded = true;
 
     this.model = new TEWholeModel(resourceSubdir);
+    TEApp.wholeModel = this.model;
 
     new LXStudio(this, flags, this.model);
     this.surface.setTitle(this.model.name);
-
+    
     String logFileName = LOG_FILENAME_FORMAT.format(Calendar.getInstance().getTime());
     LX.setLogFile(new File(flags.mediaPath, LX.Media.LOGS.getDirName() + File.separator + logFileName));
   }
@@ -113,7 +121,9 @@ public class TEApp extends PApplet implements LXPlugin  {
           if (finalProjectFile.exists()) {
             LX.log("Opening project file passed as argument: " + projectFileName);
             lx.openProject(finalProjectFile);
-          }          
+          } else {
+        	LX.error("Project filename not found: " + projectFileName);
+          }
         } catch (Exception x) {
           LX.error(x, "Exception loading project: " + x.getLocalizedMessage());
         }
@@ -156,6 +166,10 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(FrameBrights.class);
     lx.registry.addPattern(FourStar.class);
     lx.registry.addPattern(Iceflow.class);
+    lx.registry.addPattern(NeuralWaves.class);
+    lx.registry.addPattern(NeuralBeatRadial.class);
+    lx.registry.addPattern(NeuralBeatRadialXY.class);
+    lx.registry.addPattern(NeuralBeatXY.class);
     lx.registry.addPattern(Phasers.class);
     lx.registry.addPattern(PixelblazeSandbox.class);
     lx.registry.addPattern(PBAudio1.class);
@@ -187,9 +201,10 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(BassReactiveEdge.class);
     lx.registry.addPattern(TempoReactiveEdge.class);
     lx.registry.addPattern(ArtStandards.class);
-    lx.registry.addEffect(titanicsend.effect.BasicEffect.class);
+    lx.registry.addEffect(titanicsend.effect.EdgeSieve.class);
     lx.registry.addEffect(titanicsend.effect.Kaleidoscope.class);
     lx.registry.addEffect(titanicsend.effect.NoGapEffect.class);
+    lx.registry.addEffect(BeaconEffect.class);
 
     @SuppressWarnings("unchecked")
     Function<Class<?>, Class<LXPattern>[]> patternGetter =
@@ -207,7 +222,10 @@ public class TEApp extends PApplet implements LXPlugin  {
     lx.registry.addPattern(PowerDebugger.class);
     // lx.registry.addPattern(ModuleEditor.class);
     lx.registry.addPattern(SignalDebugger.class);
+    lx.registry.addPattern(TEEdgeTestPattern.class);
+    lx.registry.addPattern(TEPanelTestPattern.class);
 
+    lx.engine.midi.registerSurface("Network lighting-1-APC-40", APC40Mk2.class);
     // create our library for autopilot
     this.library = initializePatternLibrary(lx);
 
@@ -267,7 +285,7 @@ public class TEApp extends PApplet implements LXPlugin  {
     GPOutput gpOutput = new GPOutput(lx, this.gpBroadcaster);
     lx.addOutput(gpOutput);
     
-    loadCLfile(lx);
+    lx.addProjectListener(this);
   }
 
   private TEPatternLibrary initializePatternLibrary(LX lx) {
@@ -302,18 +320,15 @@ public class TEApp extends PApplet implements LXPlugin  {
     l.addPattern(OrganicPatternConfig.NeonCellsLegacy.class, covPanelPartial, cPalette, chorus);
     l.addPattern(OrganicPatternConfig.RainbowSwirlEdges.class, covEdges, cNonConforming, chorus);
     l.addPattern(ShaderPanelsPatternConfig.NeonTriangles.class, covPanels, cNonConforming, chorus);
-    l.addPattern(OrganicPatternConfig.NeonSnake.class, covPanels, cPalette, chorus);
     l.addPattern(ShaderPanelsPatternConfig.Mondelbrot.class, covPanels, cNonConforming, chorus);
     l.addPattern(Phasers.class, covPanels, cPalette, chorus);
     l.addPattern(ShaderPanelsPatternConfig.PulsingPetriDish.class, covPanels, cNonConforming, chorus);
-    l.addPattern(FourStar.class, covPanelPartial, cPalette, chorus);
     l.addPattern(ShaderPanelsPatternConfig.Electric.class, covPanelPartial, cPalette, chorus);
     l.addPattern(ShaderPanelsPatternConfig.AudioTest2.class, covBoth, cNonConforming, chorus);
+    l.addPattern(EdgeRunner.class, covEdges, cPalette, chorus);
 
     // DOWN patterns
     l.addPattern(GradientPattern.class, covPanelPartial, cPalette, down);
-    //l.addPattern(Smoke.class, covBoth, cPalette, down); // can't see with colorize
-    l.addPattern(OrganicPatternConfig.NeonSnake.class, covPanels, cPalette, down);
     l.addPattern(OrganicPatternConfig.WaterEdges.class, covEdges, cPalette, down);
     l.addPattern(OrganicPatternConfig.WaterPanels.class, covPanelPartial, cPalette, down);
     l.addPattern(OrganicPatternConfig.WavyEdges.class, covEdges, cPalette, down);
@@ -328,17 +343,7 @@ public class TEApp extends PApplet implements LXPlugin  {
     l.addPattern(ShaderPanelsPatternConfig.Electric.class, covPanelPartial, cNonConforming, up);
     l.addPattern(ShaderPanelsPatternConfig.Marbling.class, covPanels, cNonConforming, up);
     l.addPattern(ShaderPanelsPatternConfig.SlitheringSnake.class, covPanelPartial, cPalette, up);
-    l.addPattern(Fireflies.class, covPanelPartial, cPalette, up);
     l.addPattern(PBAudio1.class, covPanelPartial, cPalette, up);
-
-    // misc patterns
-    //l.addPattern(EdgeProgressions.class, covEdges, colorWhite, chorus);
-    //l.addPattern(EdgeSymmetry.class, covEdges, colorWhite, chorus);
-    //lx.registry.addPattern(PBFireworkNova.class); // would make great strobe / trigger...
-    //lx.registry.addPattern(PulsingTriangles.class); // would make great strobe...
-    //lx.registry.addPattern(Fireflies.class); // OK but kills FPS...
-    //l.addPattern(ReactiveHeartPattern.class, covPanels, colorNonConforming, TEPhrase.CHORUS); // needs to not be on all panels, reactive
-    //l.addPattern(BassLightning.class, covEdges, cWhite, chorus); // would be amazing right before a drop, on sound!!
 
     return l;
   }
@@ -366,6 +371,10 @@ public class TEApp extends PApplet implements LXPlugin  {
 
     // precompile binaries for any new or changed shaders
     ShaderPrecompiler.rebuildCache();
+       
+    lx.engine.addTask(() -> {
+      loadCLfile(lx);
+    });
   }
 
   @Override
@@ -444,5 +453,12 @@ public class TEApp extends PApplet implements LXPlugin  {
       PApplet.main("titanicsend.app.TEApp", args);
     }
   }
+  
+	public void projectChanged(File file, Change change) {
+		if (change == Change.TRY || change == Change.NEW) {
+			// Clear for file open
+			this.autopilotComponent.autopilotEnabledToggle.setValue(false);
+		} 
+	}
 
 }

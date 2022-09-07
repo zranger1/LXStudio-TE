@@ -1,6 +1,6 @@
 {
   "version": "0.4.1",
-  "timestamp": 1661390119257,
+  "timestamp": 1661821321584,
   "model": {
     "id": 2,
     "class": "heronarts.lx.structure.LXStructure",
@@ -1984,9 +1984,9 @@
           "scene-3": false,
           "scene-4": false,
           "scene-5": false,
-          "crossfader": 0.3464566929133858,
+          "crossfader": 0.7165354330708661,
           "crossfaderBlendMode": 1,
-          "focusedChannel": 7,
+          "focusedChannel": 1,
           "cueA": false,
           "cueB": false,
           "viewCondensed": false
@@ -2001,7 +2001,7 @@
             "parameters": {
               "label": "Master",
               "arm": false,
-              "selected": true
+              "selected": false
             },
             "children": {},
             "effects": [
@@ -2054,8 +2054,8 @@
               "selected": false,
               "enabled": true,
               "cue": false,
-              "fader": 1.0,
-              "crossfadeGroup": 0,
+              "fader": 0.7637795275590551,
+              "crossfadeGroup": 2,
               "blendMode": 4,
               "midiMonitor": false,
               "midiChannel": 16,
@@ -2124,7 +2124,7 @@
             "parameters": {
               "label": "Panel BG",
               "arm": false,
-              "selected": false,
+              "selected": true,
               "enabled": true,
               "cue": false,
               "fader": 1.0,
@@ -2141,13 +2141,13 @@
               "transitionEnabled": false,
               "transitionTimeSecs": 5.0,
               "transitionBlendMode": 0,
-              "focusedPattern": 0,
+              "focusedPattern": 1,
               "triggerPatternCycle": false
             },
             "children": {},
             "effects": [],
             "clips": [],
-            "patternIndex": 0,
+            "patternIndex": 1,
             "patterns": [
               {
                 "id": 9135,
@@ -2184,6 +2184,46 @@
                   }
                 },
                 "deviceVersion": -1
+              },
+              {
+                "id": 2511672,
+                "class": "titanicsend.pattern.yoffa.config.ShaderPanelsPatternConfig$Marbling",
+                "internal": {
+                  "modulationColor": 0,
+                  "expanded": true,
+                  "modulationExpanded": false,
+                  "autoCycleEligible": true
+                },
+                "parameters": {
+                  "label": "Marbling",
+                  "recall": false,
+                  "tile": 2.0,
+                  "xWave": 2.5,
+                  "curve": 10.0,
+                  "yWave": 1.5,
+                  "iColor/brightness": 0.0,
+                  "iColor/saturation": 0.0,
+                  "iColor/hue": 0.0,
+                  "iColor/mode": 1,
+                  "iColor/index": 3
+                },
+                "children": {
+                  "modulation": {
+                    "id": 2511673,
+                    "class": "heronarts.lx.modulation.LXModulationEngine",
+                    "internal": {
+                      "modulationColor": 0
+                    },
+                    "parameters": {
+                      "label": "Modulation"
+                    },
+                    "children": {},
+                    "modulators": [],
+                    "modulations": [],
+                    "triggers": []
+                  }
+                },
+                "deviceVersion": -1
               }
             ]
           },
@@ -2200,7 +2240,7 @@
               "selected": false,
               "enabled": true,
               "cue": false,
-              "fader": 1.0,
+              "fader": 0.984251968503937,
               "crossfadeGroup": 0,
               "blendMode": 4,
               "midiMonitor": false,
@@ -2315,7 +2355,7 @@
               "selected": false,
               "enabled": true,
               "cue": false,
-              "fader": 1.0,
+              "fader": 0.7322834645669292,
               "crossfadeGroup": 0,
               "blendMode": 1,
               "midiMonitor": false,
@@ -2396,7 +2436,7 @@
                   "color/index": 4,
                   "tempoDivision": 5,
                   "triggerMode": 0,
-                  "sceneSelect": 5,
+                  "sceneSelect": 63,
                   "trigger": false,
                   "downbeat": false
                 },
@@ -2431,9 +2471,9 @@
               "label": "Panel FG",
               "arm": false,
               "selected": false,
-              "enabled": true,
+              "enabled": false,
               "cue": false,
-              "fader": 1.0,
+              "fader": 0.5669291338582677,
               "crossfadeGroup": 0,
               "blendMode": 4,
               "midiMonitor": false,
@@ -2624,7 +2664,7 @@
               "label": "Combo FG",
               "arm": false,
               "selected": false,
-              "enabled": true,
+              "enabled": false,
               "cue": false,
               "fader": 0.7795275590551181,
               "crossfadeGroup": 0,
@@ -2893,7 +2933,7 @@
               "label": "Debugging",
               "arm": false,
               "selected": false,
-              "enabled": false,
+              "enabled": true,
               "cue": false,
               "fader": 1.0,
               "crossfadeGroup": 0,
@@ -3109,7 +3149,7 @@
         },
         "parameters": {
           "label": "Output",
-          "enabled": false,
+          "enabled": true,
           "brightness": 1.0,
           "fps": 0.0,
           "gamma": 1.0,
@@ -3156,8 +3196,18 @@
           "computerKeyboardVelocity": 5
         },
         "children": {},
-        "inputs": [],
+        "inputs": [
+          {
+            "name": "Network lighting-1-APC-40",
+            "channel": false,
+            "control": false,
+            "sync": false
+          }
+        ],
         "surfaces": [
+          {
+            "name": "Network lighting-1-APC-40"
+          },
           {
             "name": "APC40 mkII"
           }
@@ -3218,18 +3268,18 @@
               "attack": 10.0,
               "release": 100.0,
               "slope": 4.5,
-              "band-1": 0.04119293335453433,
-              "band-2": 0.07570486615285044,
-              "band-3": 0.06544885217776297,
-              "band-4": 0.021121487780129122,
+              "band-1": 0.0,
+              "band-2": 0.0,
+              "band-3": 0.0,
+              "band-4": 0.0,
               "band-5": 0.0,
               "band-6": 0.0,
-              "band-7": 0.005260712840353232,
-              "band-8": 0.08686224665909215,
-              "band-9": 0.1521442427460281,
-              "band-10": 0.10260739132581731,
-              "band-11": 0.05911655300712937,
-              "band-12": 0.0016824052007793355,
+              "band-7": 0.0,
+              "band-8": 0.0,
+              "band-9": 0.0,
+              "band-10": 0.0,
+              "band-11": 0.0,
+              "band-12": 0.0,
               "band-13": 0.0,
               "band-14": 0.0,
               "band-15": 0.0,
@@ -3290,7 +3340,7 @@
         "centerPoint": false,
         "camera": {
           "active": false,
-          "radius": 1.2413107896290043E7,
+          "radius": 1.265726384477555E7,
           "theta": -1.8284876379184425,
           "phi": -0.08619532594457269,
           "x": 303442.78125,
@@ -3300,7 +3350,7 @@
         "cue": [
           {
             "active": false,
-            "radius": 1.2413107896290043E7,
+            "radius": 1.265726384477555E7,
             "theta": -1.8284876379184425,
             "phi": -0.08619532594457269,
             "x": 303442.78125,

@@ -47,8 +47,8 @@ public class TEPanelModel extends TEModel {
 
   public TEPanelModel(String id, ArrayList<LXPoint> points, TEVertex v0, TEVertex v1, TEVertex v2,
                       TEEdgeModel e0, TEEdgeModel e1, TEEdgeModel e2, String panelType,
-                      String flavor, LXVector centroid, int[] channelLengths) {
-    super("Panel", points);
+                      String flavor, LXVector centroid, int[] channelLengths, String ... tags) {
+    super("Panel", points, tags);
 
     this.id = id;
 
@@ -155,7 +155,7 @@ public class TEPanelModel extends TEModel {
   // TODO Replace this with something smarter
   // This is a really lazy/sloppy way of doing this, though if we're not changing the model it should be fine
   public TEPanelSection getSection() {
-    if (panelType.equals(SOLID)) {
+    if (centroid.x > 1200000) {
       return TEPanelSection.PORT;
     }
 

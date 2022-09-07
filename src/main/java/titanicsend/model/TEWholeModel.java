@@ -12,6 +12,7 @@ import heronarts.lx.transform.LXVector;
 import titanicsend.lasercontrol.MovingTarget;
 import titanicsend.output.ChromatechSocket;
 import titanicsend.output.GrandShlomoStation;
+import titanicsend.util.TE;
 
 public class TEWholeModel extends LXModel {
   public String subdir;
@@ -90,8 +91,15 @@ public class TEWholeModel extends LXModel {
     this.panelsByFlavor = geometry.panelsByFlavor;
 
     this.panelPoints = new ArrayList<>();
-    for (TEPanelModel p : this.panelsById.values()) {
-      this.panelPoints.addAll(Arrays.asList(p.points));
+    // filter gap points from panelPoints list
+    for (TEPanelModel panel : this.panelsById.values()) {
+      for (LXPoint pt : panel.points) {
+        if (isGapPoint(pt)) {
+          TE.log("Kicking out gap point");
+        } else {
+          this.panelPoints.add(pt);
+        }
+      }
     }
 
     this.lasersById = geometry.lasersById;
@@ -235,7 +243,8 @@ public class TEWholeModel extends LXModel {
       assert v0Id < v1Id;
       TEVertex v0 = geometry.vertexesById.get(v0Id);
       TEVertex v1 = geometry.vertexesById.get(v1Id);
-      TEEdgeModel e = new TEEdgeModel(v0, v1, edgePixelCounts.get(id), dark);
+      String[] tags = new String[] { tokens[0] + tokens[1] };
+      TEEdgeModel e = new TEEdgeModel(v0, v1, edgePixelCounts.get(id), dark, tags);
       v0.addEdge(e);
       v1.addEdge(e);
 
@@ -513,8 +522,9 @@ public class TEWholeModel extends LXModel {
       int x = Integer.parseInt(tokens[1]);
       int y = Integer.parseInt(tokens[2]);
       int z = Integer.parseInt(tokens[3]);
+      String[] tags = new String[] { id };
 
-      TELaserModel laser = new TELaserModel(id, x, y, z);
+      TELaserModel laser = new TELaserModel(id, x, y, z, tags);
       //laser.control = new Cone(laser);
       laser.control = new MovingTarget(laser);
       geometry.lasersById.put(id, laser);
@@ -631,6 +641,12 @@ public class TEWholeModel extends LXModel {
 
   public Set<TEPanelModel> getPanelsBySection(TEPanelSection section) {
     return panelsBySection.get(section);
+  }
+
+  public Set<LXPoint> getEdgePointsBySection(TEEdgeSection section) {
+    return edgePoints.stream()
+            .filter(point -> section == TEEdgeSection.PORT ? point.x > 0 : point.x < 0)
+            .collect(Collectors.toSet());
   }
 
   public Set<LXPoint> getPointsBySection(TEPanelSection section) {

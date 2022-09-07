@@ -31,6 +31,12 @@ public class TEMixerUtils {
 
     public static void setFaderTo(LX lx, TEChannelName name, double faderLevel) {
         try {
+        	// Don't crash
+        	if (lx.engine.mixer.channels.size() <= name.getIndex()) {
+                TE.err("Error setting fader, mixer does't see any channels (!)");
+                return;
+            }
+        	
             LXChannel channel = (LXChannel) lx.engine.mixer.channels.get(name.getIndex());
             channel.fader.setValue(faderLevel);
 
@@ -72,7 +78,15 @@ public class TEMixerUtils {
         int numTries = 0;
         while (numTries < 8) {
             try {
-                return (LXChannel) lx.engine.mixer.channels.get(name.getIndex());
+            	// JKB mod, now that autopilot loads after everything else,
+            	//  if channel index isn't there then the .lxp isn't AutoVJ and it's not going to show up...
+            	//if (lx.engine.mixer.channels.contains(name))
+            	if (lx.engine.mixer.channels.size() > name.getIndex()) {            		
+            		return (LXChannel) lx.engine.mixer.channels.get(name.getIndex());
+            	} else {
+                    TE.err("Error in getChannelByName(%s), mixer does't see enough channels (!)", name);
+            		return null;
+            	}
             } catch (IndexOutOfBoundsException e) {
                 numTries++;
                 double waitMs = Math.pow(2.0, (double)numTries) * 1000;
@@ -85,27 +99,5 @@ public class TEMixerUtils {
             }
         }
         return null;
-    }
-
-    public static LXClip pickRandomClipFromChannel(LX lx, TEChannelName channelName) {
-        LXChannel triggersChannel = (LXChannel) lx.engine.mixer.channels.get(channelName.getIndex());
-        Random random = new Random();
-        int numClips = triggersChannel.clips.size();
-        int randIdx = random.nextInt(0, numClips);
-        LXClip clip = triggersChannel.clips.get(randIdx);
-//        TE.log("From channel=%d, picked pattern %d / %d to get pattern=%d", channelName.getIndex(), randIdx, numClips, clip.getIndex());
-        return clip;
-    }
-
-    public static int pickRandomPatternIndexFromChannel(LXChannel channel) {
-        List<LXPattern> patterns = channel.getPatterns();
-        Random random = new Random();
-        int randIdx = random.nextInt(0, patterns.size());
-        return randIdx;
-    }
-
-    public static LXPattern pickRandomPatternFromChannel(LXChannel channel) {
-        int randIdx = pickRandomPatternIndexFromChannel(channel);
-        return channel.getPattern(randIdx);
     }
 }

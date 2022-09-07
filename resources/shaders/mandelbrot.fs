@@ -79,7 +79,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float c;
     // if(d <r) c = 1.; else c = 1.-1./(1+exp());
     // c = float(final_score)/float(max_iter+1);
-    c = 1./(1.+sqrt(final_score)) - {%Glow[0.25,0.5,0]};
+
+    c = 1./(1.+sqrt(final_score));
+    vec3 col = vec3(c) * iPalette[TE_PRIMARY];
+
 
     // Output to screen
     fragColor = vec4(iColorRGB * c,c);
