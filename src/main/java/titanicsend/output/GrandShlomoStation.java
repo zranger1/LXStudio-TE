@@ -27,7 +27,7 @@ public class GrandShlomoStation {
     List<ChromatechSocket> sockets = new ArrayList<>(outputs.keySet());
     Collections.sort(sockets);
     for (ChromatechSocket socket : sockets) {
-      socket.activate(lx, gapPointIndex);
+    //  socket.activate(lx, gapPointIndex);
     }
   }
 }

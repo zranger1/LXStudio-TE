@@ -18,7 +18,9 @@ vec3 fractal(vec2 p) {
 
     for (float i = 0.; i < 4.; i++) {
         p=abs(p);
-        p=p/clamp(p.x*p.y,0.15,5.)-vec2(1.5,1.);
+        //p=p/clamp(p.x*p.y,0.15,5.)-vec2(1.5,1.);
+         p=p/clamp(p.x*p.y,0.15,5.)-vec2(1.5,1.);
+
         float m = abs(p.x/p.y+sin(iTime*2.));
         if (m<=ot1) {
             ot1=m+step(fract(iTime*0.5+float(i)*.05),0.05*abs(p.y));

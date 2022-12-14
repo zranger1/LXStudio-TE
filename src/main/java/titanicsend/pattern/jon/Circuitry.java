@@ -48,7 +48,7 @@ public class Circuitry extends TEAudioPattern {
         options.useAlpha(true);
         options.useLXParameterUniforms(false);
 
-        effect = new NativeShaderPatternEffect("circuitry.fs",
+        effect = new NativeShaderPatternEffect("kaleido.fs",
                 PatternTarget.allPointsAsCanvas(this), options);
 
         vTime = new VariableSpeedTimer();
@@ -67,7 +67,7 @@ public class Circuitry extends TEAudioPattern {
         }
 
         // movement over time, however fast time is running
-        //shader.setUniform("vTime",vTime.getTime());
+        shader.setUniform("vTime",vTime.getTime());
 
         // Sound reactivity - various brightness features are related to energy
         float e = energy.getValuef();

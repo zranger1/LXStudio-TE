@@ -145,7 +145,7 @@ public class TEApp extends PApplet implements LXPlugin, LX.ProjectListener  {
     this.autopilotComponent = new TEUserInterface.AutopilotComponent(lx);
     lx.engine.registerComponent("autopilot", this.autopilotComponent);
 
-    GrandShlomoStation.activateAll(lx, this.model.gapPoint.index);
+    //GrandShlomoStation.activateAll(lx, this.model.gapPoint.index);
 
     // Patterns/effects that currently conform to art direction standards
     lx.registry.addPattern(EdgeProgressions.class);
@@ -163,7 +163,6 @@ public class TEApp extends PApplet implements LXPlugin, LX.ProjectListener  {
     lx.registry.addPattern(EdgeKITT.class);
     lx.registry.addPattern(EdgeRunner.class);
     lx.registry.addPattern(FollowThatStar.class);
-    lx.registry.addPattern(FrameBrights.class);
     lx.registry.addPattern(FourStar.class);
     lx.registry.addPattern(Iceflow.class);
     lx.registry.addPattern(NeuralWaves.class);
